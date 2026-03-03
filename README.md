@@ -1,0 +1,2 @@
+# analytical-dashboard
+Educational project
