@@ -1292,9 +1292,6 @@ def ui_pdf_export(period_from: date, period_to: date):
             logger.exception("pdf generation failed")
             st.error(f"Ошибка формирования PDF: {e}")
 
-    st.info("Примечание: для PDF используются статические PNG-графики через matplotlib (без Kaleido).")
-
-
 # ----------------------------
 # Main navigation
 # ----------------------------
