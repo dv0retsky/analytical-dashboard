@@ -3,7 +3,7 @@
 </h2>
 
 <div align="center">
-  <img alt="Project Demo" src="./Images/readme-img.png" />
+  <img alt="Project Demo" src="./app/assets/fig-1.png" />
 </div>
 
 <br/>
