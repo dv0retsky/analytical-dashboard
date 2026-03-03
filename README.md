@@ -95,5 +95,77 @@ project_activity-4/
 ### 1️⃣ Clone the repository
 
 ```bash
-git clone <YOUR_REPOSITORY_URL>
+git clone https://github.com/dv0retsky/analytical-dashboard
 ```
+
+### 2️⃣ Navigate to project folder
+
+```bash
+cd analytical-dashboard
+```
+
+### 3️⃣ Create virtual environment
+
+Linux / macOS
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+Windows (PowerShell)
+
+```bash
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+### 4️⃣ Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### 5️⃣ Start the app
+
+```bash
+streamlit run app/main.py
+```
+
+Приложение будет доступно по адресу: `http://localhost:8501`
+Страница автоматически обновляется при изменениях в коде.
+
+## 🖋 Usage Instructions
+1. Запусти приложение и перейди по разделам в меню Streamlit:
+- Dashboard
+- Products
+- Sales
+- HR Events
+- HR Documents
+- PDF Report
+
+2. Для отчёта открой раздел **PDF Report**, выбери период и сгенерируй файл.
+
+3. Если нужно пересоздать данные “с нуля”:
+- останови приложение,
+- удали файл:
+
+```bash
+rm -f data/stroymarket.db
+```
+
+- запусти приложение снова — БД и данные создадутся автоматически.
+
+## ⚙️ Environment Variables (Optional)
+
+Можно настроить приложение через `.env`:
+
+```bash
+APP_NAME=СтройМаркет — Операционный Дашборд
+LOG_LEVEL=INFO
+DATABASE_URL=sqlite:///./data/stroymarket.db
+```
+
+---
+
+<div align="center"> Made with ❤️ by <b>dv0retsky</b> </div>
