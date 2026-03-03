@@ -1,0 +1,8 @@
+streamlit>=1.37.1
+plotly>=6.0.0
+pandas>=2.2.3
+SQLAlchemy>=2.0.32
+pydantic>=2.8.2
+python-dotenv>=1.0.1
+reportlab>=4.2.2
+matplotlib>=3.10.0
