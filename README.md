@@ -53,7 +53,7 @@
 ## 🗂 Project Structure
 
 ```text
-project_activity-4/
+analytical-dashboard/
 ├─ app/
 │  ├─ __init__.py
 │  ├─ main.py                 # Streamlit UI: разделы, метрики, графики, фильтры
