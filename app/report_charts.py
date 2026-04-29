@@ -55,16 +55,16 @@ def _empty_plot(title: str) -> bytes:
 
 def png_revenue_by_day(sales_df: pd.DataFrame) -> bytes:
     if sales_df.empty:
-        return _empty_plot("Выручка по дням")
+        return _empty_plot("Объём работ по дням")
 
     by_day = (
         sales_df.groupby("sale_date", as_index=False)["revenue"].sum().sort_values("sale_date")
     )
     fig, ax = plt.subplots(figsize=(7.8, 3.6))
     ax.plot(by_day["sale_date"], by_day["revenue"], marker="o")
-    ax.set_title("Выручка по дням")
+    ax.set_title("Объём работ по дням")
     ax.set_xlabel("Дата")
-    ax.set_ylabel("Выручка")
+    ax.set_ylabel("Объём работ, усл. ед.")
     fig.autofmt_xdate(rotation=25)
     ax.grid(True, alpha=0.25)
     return _png_bytes(fig)
@@ -72,7 +72,7 @@ def png_revenue_by_day(sales_df: pd.DataFrame) -> bytes:
 
 def png_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> bytes:
     if sales_df.empty:
-        return _empty_plot(f"Топ-{top_n} товаров по выручке")
+        return _empty_plot(f"Топ-{top_n} СВЧ-компонентов по объёму работ")
 
     by_prod = (
         sales_df.groupby("product_name", as_index=False)["revenue"].sum().sort_values("revenue")
@@ -81,9 +81,9 @@ def png_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> bytes:
 
     fig, ax = plt.subplots(figsize=(7.8, 4.2))
     ax.barh(by_prod["product_name"], by_prod["revenue"])
-    ax.set_title(f"Топ-{top_n} товаров по выручке")
-    ax.set_xlabel("Выручка")
-    ax.set_ylabel("Товар")
+    ax.set_title(f"Топ-{top_n} СВЧ-компонентов по объёму работ")
+    ax.set_xlabel("Объём работ, усл. ед.")
+    ax.set_ylabel("Компонент/изделие")
     ax.grid(True, axis="x", alpha=0.25)
     return _png_bytes(fig)
 
@@ -91,7 +91,7 @@ def png_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> bytes:
 def png_revenue_share_by_category(sales_df: pd.DataFrame, max_categories: int = 8) -> bytes:
 
     if sales_df.empty:
-        return _empty_plot("Доля выручки по категориям")
+        return _empty_plot("Доля объёма работ по категориям")
 
     by_cat = (
         sales_df.groupby("category", as_index=False)["revenue"]
@@ -114,14 +114,14 @@ def png_revenue_share_by_category(sales_df: pd.DataFrame, max_categories: int = 
         startangle=90,
         wedgeprops={"width": 0.45, "edgecolor": "white"},
     )
-    ax.set_title("Доля выручки по категориям")
+    ax.set_title("Доля объёма работ по категориям")
     ax.axis("equal")
     return _png_bytes(fig)
 
 
 def png_hr_events_by_month(hr_df: pd.DataFrame) -> bytes:
     if hr_df.empty:
-        return _empty_plot("HR события по месяцам")
+        return _empty_plot("События инженерной команды по месяцам")
 
     df = hr_df.copy()
     df["month"] = pd.to_datetime(df["start_date"]).dt.to_period("M").astype(str)
@@ -139,7 +139,7 @@ def png_hr_events_by_month(hr_df: pd.DataFrame) -> bytes:
         else:
             ax.bar(pivot.index, pivot[col], bottom=bottom, label=str(col))
             bottom = bottom + pivot[col].values
-    ax.set_title("HR события по месяцам")
+    ax.set_title("События инженерной команды по месяцам")
     ax.set_xlabel("Месяц")
     ax.set_ylabel("Количество")
     ax.legend(loc="upper right", fontsize=8)
@@ -150,12 +150,12 @@ def png_hr_events_by_month(hr_df: pd.DataFrame) -> bytes:
 
 def png_documents_status(doc_df: pd.DataFrame) -> bytes:
     if doc_df.empty:
-        return _empty_plot("Статусы документов")
+        return _empty_plot("Статусы технических документов")
 
     by = doc_df.groupby("status", as_index=False).size().sort_values("size", ascending=False)
     fig, ax = plt.subplots(figsize=(7.8, 3.6))
     ax.bar(by["status"], by["size"])
-    ax.set_title("Статусы документов")
+    ax.set_title("Статусы технических документов")
     ax.set_xlabel("Статус")
     ax.set_ylabel("Количество")
     ax.grid(True, axis="y", alpha=0.25)
@@ -166,7 +166,7 @@ def png_documents_status(doc_df: pd.DataFrame) -> bytes:
 def png_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) -> bytes:
 
     if sales_df.empty:
-        return _empty_plot("Распределение дневной выручки по точкам")
+        return _empty_plot("Распределение дневного объёма работ по стендам")
 
     by = (
         sales_df.groupby(["store", "sale_date"], as_index=False)["revenue"]
@@ -174,7 +174,7 @@ def png_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) ->
         .dropna(subset=["store", "sale_date"])
     )
     if by.empty:
-        return _empty_plot("Распределение дневной выручки по точкам")
+        return _empty_plot("Распределение дневного объёма работ по стендам")
 
     top_stores = (
         by.groupby("store")["revenue"].sum().sort_values(ascending=False).head(max_stores).index.tolist()
@@ -192,9 +192,9 @@ def png_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) ->
         showmeans=True,
         meanline=True,
     )
-    ax.set_title("Распределение дневной выручки по точкам")
-    ax.set_xlabel("Точка")
-    ax.set_ylabel("Дневная выручка")
+    ax.set_title("Распределение дневного объёма работ по стендам")
+    ax.set_xlabel("Стенд/участок")
+    ax.set_ylabel("Дневной объём работ, усл. ед.")
     ax.grid(True, axis="y", alpha=0.25)
     fig.autofmt_xdate(rotation=20)
     return _png_bytes(fig)
@@ -203,24 +203,24 @@ def png_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) ->
 def png_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 1500) -> bytes:
 
     if sales_df.empty:
-        return _empty_plot("Цена vs Количество")
+        return _empty_plot("Нормо-стоимость vs количество образцов")
 
     df = sales_df.dropna(subset=["unit_price", "qty"]).copy()
     if df.empty:
-        return _empty_plot("Цена vs Количество")
+        return _empty_plot("Нормо-стоимость vs количество образцов")
 
     df = df[(df["unit_price"] > 0) & (df["qty"] > 0)]
     if df.empty:
-        return _empty_plot("Цена vs Количество")
+        return _empty_plot("Нормо-стоимость vs количество образцов")
 
     if len(df) > max_points:
         df = df.sample(n=max_points, random_state=42)
 
     fig, ax = plt.subplots(figsize=(7.8, 4.0))
     ax.scatter(df["unit_price"].astype(float), df["qty"].astype(float), alpha=0.55)
-    ax.set_title("Цена vs Количество (строки продаж)")
-    ax.set_xlabel("Цена за единицу")
-    ax.set_ylabel("Количество")
+    ax.set_title("Нормо-стоимость vs количество образцов")
+    ax.set_xlabel("Нормо-стоимость за единицу")
+    ax.set_ylabel("Количество образцов")
     ax.grid(True, alpha=0.25)
     return _png_bytes(fig)
 
@@ -228,11 +228,11 @@ def png_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 1500) -> byt
 def png_documents_donut_status(doc_df: pd.DataFrame) -> bytes:
 
     if doc_df.empty:
-        return _empty_plot("Доля статусов документов")
+        return _empty_plot("Доля статусов технических документов")
 
     by = doc_df.groupby("status", as_index=False).size().sort_values("size", ascending=False)
     if by.empty:
-        return _empty_plot("Доля статусов документов")
+        return _empty_plot("Доля статусов технических документов")
 
     fig, ax = plt.subplots(figsize=(7.0, 4.0))
     ax.pie(
@@ -242,6 +242,6 @@ def png_documents_donut_status(doc_df: pd.DataFrame) -> bytes:
         startangle=90,
         wedgeprops={"width": 0.45, "edgecolor": "white"},
     )
-    ax.set_title("Доля статусов документов")
+    ax.set_title("Доля статусов технических документов")
     ax.axis("equal")
     return _png_bytes(fig)
