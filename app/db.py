@@ -12,7 +12,6 @@ from app.models import Base, Product, Sale, HREvent, HRDocument, HREventType, Do
 
 
 def _ensure_sqlite_dir(database_url: str) -> None:
-    # sqlite:///./data/file.db  -> нужно создать ./data
     if database_url.startswith("sqlite:///"):
         path = database_url.replace("sqlite:///", "", 1)
         dirpath = os.path.dirname(path)
@@ -58,7 +57,6 @@ def _add_demo_sales(
     rows_to_add: int,
     salt: int = 0,
 ) -> int:
-    """Добавляет детерминированные демонстрационные операции без дублей."""
     if rows_to_add <= 0 or not products:
         return 0
 
@@ -81,12 +79,9 @@ def _add_demo_sales(
 
     added = 0
     cycle = 0
-    # Несколько проходов нужны на случай, если часть строк уже была добавлена раньше.
     while added < rows_to_add and cycle < 12:
         for day_offset in range(days_count):
             day = date_from + timedelta(days=day_offset)
-            # В каждом стенде каждый день появляется несколько операций, чтобы графики
-            # по дням, компонентам и категориям не были пустыми даже на коротких периодах.
             for st_i, st_name in enumerate(stores):
                 operations_per_stand = 2 + ((day.toordinal() + st_i + cycle + salt) % 3)
                 for i in range(operations_per_stand):
@@ -125,7 +120,6 @@ def _ensure_recent_engineering_events(
     today: date,
     min_recent_events: int = 16,
 ) -> None:
-    """Гарантирует наличие событий команды в актуальном периоде для графиков дашборда."""
     recent_from = today - timedelta(days=60)
     recent_count = session.scalar(
         select(func.count(HREvent.id)).where(
@@ -187,13 +181,6 @@ def _ensure_recent_engineering_events(
 
 
 def init_db_and_seed() -> None:
-    """Создаёт таблицы и гарантирует стартовое заполнение данных.
-
-    Функция идемпотентна: при повторных запусках она не «раздувает» таблицы
-    бесконтрольно, но добавляет недостающие СВЧ-компоненты и актуальные
-    операции за последние недели. Поэтому графики дашборда не остаются пустыми
-    даже если в папке data уже лежит старая демонстрационная SQLite-БД.
-    """
 
     engine = get_engine()
     Base.metadata.create_all(engine)
@@ -251,10 +238,6 @@ def init_db_and_seed() -> None:
     now = datetime.utcnow().replace(microsecond=0)
 
     with session_scope() as s:
-        # -----------------------
-        # Products: добавляем все СВЧ-позиции, даже если старая БД уже содержит
-        # 20+ записей другой предметной области.
-        # -----------------------
         existing_names = {name for (name,) in s.execute(select(Product.name)).all()}
         for name, category, price in seed_products:
             if name not in existing_names:
@@ -270,12 +253,6 @@ def init_db_and_seed() -> None:
         if not products:
             return
 
-        # -----------------------
-        # Sales / испытания и поставки.
-        # 1) Доводим общий набор до разумного объёма.
-        # 2) Отдельно гарантируем свежие записи в последние 30-45 дней,
-        #    иначе дашборд с периодом по умолчанию может показывать «нет данных».
-        # -----------------------
         sales_count = s.scalar(select(func.count(Sale.id))) or 0
         if sales_count < TARGET_SALES_TOTAL:
             _add_demo_sales(
