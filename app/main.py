@@ -180,11 +180,29 @@ def _apply_plotly_theme(fig: go.Figure) -> go.Figure:
         font=dict(color=PALETTE["text"]),
         title=dict(font=dict(color=PALETTE["text"])),
         legend=dict(font=dict(color=PALETTE["text_muted"])),
-        margin=dict(l=10, r=10, t=60, b=10),
+        margin=dict(l=10, r=10, t=60, b=20),
+        height=430,
     )
     fig.update_xaxes(gridcolor="rgba(255, 255, 255, 0.08)", zerolinecolor="rgba(255, 255, 255, 0.12)")
     fig.update_yaxes(gridcolor="rgba(255, 255, 255, 0.08)", zerolinecolor="rgba(255, 255, 255, 0.12)")
     return fig
+
+
+def _empty_plotly_figure(title: str, message: str = "Нет данных за выбранный период") -> go.Figure:
+    fig = go.Figure()
+    fig.add_annotation(
+        text=message,
+        x=0.5,
+        y=0.5,
+        xref="paper",
+        yref="paper",
+        showarrow=False,
+        font=dict(size=18, color=PALETTE["text_muted"]),
+    )
+    fig.update_xaxes(visible=False)
+    fig.update_yaxes(visible=False)
+    fig.update_layout(title=title)
+    return _apply_plotly_theme(fig)
 
 
 # ----------------------------
@@ -298,7 +316,7 @@ def invalidate_caches() -> None:
 # ----------------------------
 def fig_revenue_by_day(sales_df: pd.DataFrame) -> go.Figure:
     if sales_df.empty:
-        return go.Figure().update_layout(title="Объём работ по дням (нет данных)")
+        return _empty_plotly_figure("Объём работ по дням")
 
     by_day = sales_df.groupby("sale_date", as_index=False)["revenue"].sum().sort_values("sale_date")
     fig = px.line(by_day, x="sale_date", y="revenue", markers=True, title="Объём работ по дням")
@@ -309,7 +327,7 @@ def fig_revenue_by_day(sales_df: pd.DataFrame) -> go.Figure:
 
 def fig_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> go.Figure:
     if sales_df.empty:
-        return go.Figure().update_layout(title="Топ СВЧ-компонентов по объёму работ (нет данных)")
+        return _empty_plotly_figure("Топ СВЧ-компонентов по объёму работ")
 
     by_prod = (
         sales_df.groupby(["product_name"], as_index=False)["revenue"].sum()
@@ -325,7 +343,7 @@ def fig_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> go.Figure:
 
 def fig_revenue_share_by_category(sales_df: pd.DataFrame) -> go.Figure:
     if sales_df.empty:
-        return go.Figure().update_layout(title="Доля объёма работ по категориям (нет данных)")
+        return _empty_plotly_figure("Доля объёма работ по категориям")
 
     by_cat = sales_df.groupby("category", as_index=False)["revenue"].sum().sort_values("revenue", ascending=False)
     fig = px.pie(by_cat, names="category", values="revenue", title="Доля объёма работ по категориям")
@@ -334,7 +352,7 @@ def fig_revenue_share_by_category(sales_df: pd.DataFrame) -> go.Figure:
     return fig
 def fig_hr_events_by_month(hr_df: pd.DataFrame) -> go.Figure:
     if hr_df.empty:
-        return go.Figure().update_layout(title="События инженерной команды по месяцам (нет данных)")
+        return _empty_plotly_figure("События инженерной команды по месяцам")
 
     df = hr_df.copy()
     df["month"] = pd.to_datetime(df["start_date"]).dt.to_period("M").astype(str)
@@ -347,7 +365,7 @@ def fig_hr_events_by_month(hr_df: pd.DataFrame) -> go.Figure:
 
 def fig_documents_status(doc_df: pd.DataFrame) -> go.Figure:
     if doc_df.empty:
-        return go.Figure().update_layout(title="Статусы технических документов (нет данных)")
+        return _empty_plotly_figure("Статусы технических документов")
 
     by = doc_df.groupby("status", as_index=False).size().sort_values("size", ascending=False)
     fig = px.bar(by, x="status", y="size", title="Статусы технических документов (всего)")
@@ -360,14 +378,14 @@ def fig_documents_status(doc_df: pd.DataFrame) -> go.Figure:
 def fig_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) -> go.Figure:
 
     if sales_df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Распределение дневного объёма работ по стендам/участкам (нет данных)"))
+        return _empty_plotly_figure("Распределение дневного объёма работ по стендам/участкам")
 
     by = (
         sales_df.groupby(["store", "sale_date"], as_index=False)["revenue"].sum()
         .dropna(subset=["store", "sale_date"])
     )
     if by.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Распределение дневного объёма работ по стендам/участкам (нет данных)"))
+        return _empty_plotly_figure("Распределение дневного объёма работ по стендам/участкам")
 
     top_stores = (
         by.groupby("store")["revenue"].sum().sort_values(ascending=False).head(max_stores).index.tolist()
@@ -383,12 +401,12 @@ def fig_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) ->
 def fig_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 2000) -> go.Figure:
 
     if sales_df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Нормо-стоимость vs Количество образцов (нет данных)"))
+        return _empty_plotly_figure("Нормо-стоимость vs Количество образцов")
 
     df = sales_df.dropna(subset=["unit_price", "qty"]).copy()
     df = df[(df["unit_price"] > 0) & (df["qty"] > 0)]
     if df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Нормо-стоимость vs Количество образцов (нет данных)"))
+        return _empty_plotly_figure("Нормо-стоимость vs Количество образцов")
 
     if len(df) > max_points:
         df = df.sample(n=max_points, random_state=42)
@@ -410,11 +428,11 @@ def fig_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 2000) -> go.
 def fig_documents_donut_status(doc_df: pd.DataFrame) -> go.Figure:
 
     if doc_df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Доля статусов технических документов (нет данных)"))
+        return _empty_plotly_figure("Доля статусов технических документов")
 
     by = doc_df.groupby("status", as_index=False).size().sort_values("size", ascending=False)
     if by.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Доля статусов технических документов (нет данных)"))
+        return _empty_plotly_figure("Доля статусов технических документов")
 
     fig = px.pie(by, names="status", values="size", title="Доля статусов технических документов")
     fig.update_traces(hole=0.45)
@@ -890,28 +908,30 @@ def ui_dashboard(period_from: date, period_to: date):
 
     st.divider()
 
+    chart_config = {"displayModeBar": True, "responsive": True}
+
     c1, c2 = st.columns(2)
     with c1:
-        st.plotly_chart(fig_revenue_by_day(sales_df), use_container_width=True)
+        st.plotly_chart(fig_revenue_by_day(sales_df), use_container_width=True, theme=None, config=chart_config)
     with c2:
-        st.plotly_chart(fig_top_products(sales_df, top_n=10), use_container_width=True)
+        st.plotly_chart(fig_top_products(sales_df, top_n=10), use_container_width=True, theme=None, config=chart_config)
 
     c3, c4 = st.columns(2)
     with c3:
-        st.plotly_chart(fig_revenue_share_by_category(sales_df), use_container_width=True)
+        st.plotly_chart(fig_revenue_share_by_category(sales_df), use_container_width=True, theme=None, config=chart_config)
     with c4:
-        st.plotly_chart(fig_hr_events_by_month(hr_df), use_container_width=True)
+        st.plotly_chart(fig_hr_events_by_month(hr_df), use_container_width=True, theme=None, config=chart_config)
 
-    st.plotly_chart(fig_documents_status(doc_df), use_container_width=True)
+    st.plotly_chart(fig_documents_status(doc_df), use_container_width=True, theme=None, config=chart_config)
 
     with st.expander("Дополнительная аналитика", expanded=False):
         a1, a2 = st.columns(2)
         with a1:
-            st.plotly_chart(fig_revenue_boxplot_by_store(sales_df), use_container_width=True)
+            st.plotly_chart(fig_revenue_boxplot_by_store(sales_df), use_container_width=True, theme=None, config=chart_config)
         with a2:
-            st.plotly_chart(fig_scatter_price_qty(sales_df), use_container_width=True)
+            st.plotly_chart(fig_scatter_price_qty(sales_df), use_container_width=True, theme=None, config=chart_config)
 
-        st.plotly_chart(fig_documents_donut_status(doc_df), use_container_width=True)
+        st.plotly_chart(fig_documents_donut_status(doc_df), use_container_width=True, theme=None, config=chart_config)
 
 
 # ----------------------------
