@@ -19,20 +19,41 @@ from matplotlib import font_manager as _fm  # noqa: E402
 
 
 def _setup_ru_fonts() -> None:
+    """Настраивает шрифт с кириллицей для PNG-графиков.
+
+    Matplotlib обычно поставляет DejaVu Sans в составе пакета. Явно добавляем
+    этот TTF в менеджер шрифтов, чтобы подписи графиков не превращались в
+    квадраты на машинах без системных кириллических шрифтов.
+    """
 
     try:
-        font_dir = Path(__file__).resolve().parent / "assets" / "fonts"
-        regular = font_dir / "DejaVuSans.ttf"
-        bold = font_dir / "DejaVuSans-Bold.ttf"
-        if regular.exists():
-            _fm.fontManager.addfont(str(regular))
-        if bold.exists():
-            _fm.fontManager.addfont(str(bold))
+        import matplotlib as _mpl
+
+        app_font_dir = Path(__file__).resolve().parent / "assets" / "fonts"
+        mpl_font_dir = Path(_mpl.get_data_path()) / "fonts" / "ttf"
+
+        candidates = [
+            app_font_dir / "DejaVuSans.ttf",
+            mpl_font_dir / "DejaVuSans.ttf",
+            Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+            Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"),
+            Path("/Library/Fonts/Arial Unicode.ttf"),
+            Path("/Library/Fonts/Arial.ttf"),
+            Path("C:/Windows/Fonts/arial.ttf"),
+        ]
+
+        for font_path in candidates:
+            if font_path.exists() and font_path.is_file():
+                _fm.fontManager.addfont(str(font_path))
+                break
 
         matplotlib.rcParams["font.family"] = "DejaVu Sans"
+        matplotlib.rcParams["font.sans-serif"] = ["DejaVu Sans", "Arial", "Liberation Sans"]
         matplotlib.rcParams["axes.unicode_minus"] = False
+        matplotlib.rcParams["pdf.fonttype"] = 42
+        matplotlib.rcParams["ps.fonttype"] = 42
     except Exception:
-        pass
+        matplotlib.rcParams["axes.unicode_minus"] = False
 
 
 _setup_ru_fonts()
