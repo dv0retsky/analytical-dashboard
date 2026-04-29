@@ -15,9 +15,9 @@ class Settings:
 def get_settings() -> Settings:
     load_dotenv(override=False)
 
-    app_name = os.getenv("APP_NAME", "СтройМаркет — Операционный Дашборд").strip()
+    app_name = os.getenv("APP_NAME", "СВЧ-Электроника — Аналитический Дашборд").strip()
     log_level = os.getenv("LOG_LEVEL", "INFO").strip().upper()
-    database_url = os.getenv("DATABASE_URL", "sqlite:///./data/stroymarket.db").strip()
+    database_url = os.getenv("DATABASE_URL", "sqlite:///./data/svch_electronics.db").strip()
 
     return Settings(
         app_name=app_name,
