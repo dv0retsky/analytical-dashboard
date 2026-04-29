@@ -8,6 +8,8 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from datetime import date, timedelta, datetime
+from typing import Optional
+
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -189,7 +191,7 @@ def _apply_plotly_theme(fig: go.Figure) -> go.Figure:
 # App bootstrap
 # ----------------------------
 settings = get_settings()
-logger = setup_logger("stroymarket_app", settings.log_level)
+logger = setup_logger("svch_electronics_app", settings.log_level)
 
 st.set_page_config(
     page_title=settings.app_name,
@@ -296,26 +298,26 @@ def invalidate_caches() -> None:
 # ----------------------------
 def fig_revenue_by_day(sales_df: pd.DataFrame) -> go.Figure:
     if sales_df.empty:
-        return go.Figure().update_layout(title="Выручка по дням (нет данных)")
+        return go.Figure().update_layout(title="Объём работ по дням (нет данных)")
 
     by_day = sales_df.groupby("sale_date", as_index=False)["revenue"].sum().sort_values("sale_date")
-    fig = px.line(by_day, x="sale_date", y="revenue", markers=True, title="Выручка по дням")
-    fig.update_layout(xaxis_title="Дата", yaxis_title="Выручка")
+    fig = px.line(by_day, x="sale_date", y="revenue", markers=True, title="Объём работ по дням")
+    fig.update_layout(xaxis_title="Дата", yaxis_title="Объём работ, усл. ед.")
     _apply_plotly_theme(fig)
     return fig
 
 
 def fig_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> go.Figure:
     if sales_df.empty:
-        return go.Figure().update_layout(title="Топ товаров по выручке (нет данных)")
+        return go.Figure().update_layout(title="Топ СВЧ-компонентов по объёму работ (нет данных)")
 
     by_prod = (
         sales_df.groupby(["product_name"], as_index=False)["revenue"].sum()
         .sort_values("revenue", ascending=False)
         .head(top_n)
     )
-    fig = px.bar(by_prod, x="product_name", y="revenue", title=f"Топ-{top_n} товаров по выручке")
-    fig.update_layout(xaxis_title="Товар", yaxis_title="Выручка")
+    fig = px.bar(by_prod, x="product_name", y="revenue", title=f"Топ-{top_n} СВЧ-компонентов по объёму работ")
+    fig.update_layout(xaxis_title="СВЧ-компонент", yaxis_title="Объём работ, усл. ед.")
     fig.update_xaxes(tickangle=20)
     _apply_plotly_theme(fig)
     return fig
@@ -323,21 +325,21 @@ def fig_top_products(sales_df: pd.DataFrame, top_n: int = 10) -> go.Figure:
 
 def fig_revenue_share_by_category(sales_df: pd.DataFrame) -> go.Figure:
     if sales_df.empty:
-        return go.Figure().update_layout(title="Доля выручки по категориям (нет данных)")
+        return go.Figure().update_layout(title="Доля объёма работ по категориям (нет данных)")
 
     by_cat = sales_df.groupby("category", as_index=False)["revenue"].sum().sort_values("revenue", ascending=False)
-    fig = px.pie(by_cat, names="category", values="revenue", title="Доля выручки по категориям")
+    fig = px.pie(by_cat, names="category", values="revenue", title="Доля объёма работ по категориям")
     fig.update_traces(hole=0.45)
     _apply_plotly_theme(fig)
     return fig
 def fig_hr_events_by_month(hr_df: pd.DataFrame) -> go.Figure:
     if hr_df.empty:
-        return go.Figure().update_layout(title="HR события по месяцам (нет данных)")
+        return go.Figure().update_layout(title="События инженерной команды по месяцам (нет данных)")
 
     df = hr_df.copy()
     df["month"] = pd.to_datetime(df["start_date"]).dt.to_period("M").astype(str)
     by = df.groupby(["month", "event_type"], as_index=False).size()
-    fig = px.bar(by, x="month", y="size", color="event_type", barmode="stack", title="HR события по месяцам")
+    fig = px.bar(by, x="month", y="size", color="event_type", barmode="stack", title="События инженерной команды по месяцам")
     fig.update_layout(xaxis_title="Месяц", yaxis_title="Количество")
     _apply_plotly_theme(fig)
     return fig
@@ -345,10 +347,10 @@ def fig_hr_events_by_month(hr_df: pd.DataFrame) -> go.Figure:
 
 def fig_documents_status(doc_df: pd.DataFrame) -> go.Figure:
     if doc_df.empty:
-        return go.Figure().update_layout(title="Статусы документов (нет данных)")
+        return go.Figure().update_layout(title="Статусы технических документов (нет данных)")
 
     by = doc_df.groupby("status", as_index=False).size().sort_values("size", ascending=False)
-    fig = px.bar(by, x="status", y="size", title="Статусы документов (всего)")
+    fig = px.bar(by, x="status", y="size", title="Статусы технических документов (всего)")
     fig.update_layout(xaxis_title="Статус", yaxis_title="Количество")
     _apply_plotly_theme(fig)
     return fig
@@ -358,21 +360,21 @@ def fig_documents_status(doc_df: pd.DataFrame) -> go.Figure:
 def fig_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) -> go.Figure:
 
     if sales_df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Распределение дневной выручки по точкам (нет данных)"))
+        return _apply_plotly_theme(go.Figure().update_layout(title="Распределение дневного объёма работ по стендам/участкам (нет данных)"))
 
     by = (
         sales_df.groupby(["store", "sale_date"], as_index=False)["revenue"].sum()
         .dropna(subset=["store", "sale_date"])
     )
     if by.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Распределение дневной выручки по точкам (нет данных)"))
+        return _apply_plotly_theme(go.Figure().update_layout(title="Распределение дневного объёма работ по стендам/участкам (нет данных)"))
 
     top_stores = (
         by.groupby("store")["revenue"].sum().sort_values(ascending=False).head(max_stores).index.tolist()
     )
     by = by[by["store"].isin(top_stores)]
-    fig = px.box(by, x="store", y="revenue", points="outliers", title="Распределение дневной выручки по точкам")
-    fig.update_layout(xaxis_title="Точка", yaxis_title="Дневная выручка")
+    fig = px.box(by, x="store", y="revenue", points="outliers", title="Распределение дневного объёма работ по стендам/участкам")
+    fig.update_layout(xaxis_title="Стенд/участок", yaxis_title="Дневной объём работ")
     fig.update_xaxes(tickangle=15)
     _apply_plotly_theme(fig)
     return fig
@@ -381,12 +383,12 @@ def fig_revenue_boxplot_by_store(sales_df: pd.DataFrame, max_stores: int = 8) ->
 def fig_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 2000) -> go.Figure:
 
     if sales_df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Цена vs Количество (нет данных)"))
+        return _apply_plotly_theme(go.Figure().update_layout(title="Нормо-стоимость vs Количество образцов (нет данных)"))
 
     df = sales_df.dropna(subset=["unit_price", "qty"]).copy()
     df = df[(df["unit_price"] > 0) & (df["qty"] > 0)]
     if df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Цена vs Количество (нет данных)"))
+        return _apply_plotly_theme(go.Figure().update_layout(title="Нормо-стоимость vs Количество образцов (нет данных)"))
 
     if len(df) > max_points:
         df = df.sample(n=max_points, random_state=42)
@@ -398,9 +400,9 @@ def fig_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 2000) -> go.
         color="category" if "category" in df.columns else None,
         size="revenue" if "revenue" in df.columns else None,
         hover_data=["product_name", "store", "employee_name"],
-        title="Цена vs Количество (строки продаж)",
+        title="Нормо-стоимость vs Количество образцов (строки операций)",
     )
-    fig.update_layout(xaxis_title="Цена за единицу", yaxis_title="Количество")
+    fig.update_layout(xaxis_title="Нормо-стоимость за единицу", yaxis_title="Количество образцов")
     _apply_plotly_theme(fig)
     return fig
 
@@ -408,13 +410,13 @@ def fig_scatter_price_qty(sales_df: pd.DataFrame, max_points: int = 2000) -> go.
 def fig_documents_donut_status(doc_df: pd.DataFrame) -> go.Figure:
 
     if doc_df.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Доля статусов документов (нет данных)"))
+        return _apply_plotly_theme(go.Figure().update_layout(title="Доля статусов технических документов (нет данных)"))
 
     by = doc_df.groupby("status", as_index=False).size().sort_values("size", ascending=False)
     if by.empty:
-        return _apply_plotly_theme(go.Figure().update_layout(title="Доля статусов документов (нет данных)"))
+        return _apply_plotly_theme(go.Figure().update_layout(title="Доля статусов технических документов (нет данных)"))
 
-    fig = px.pie(by, names="status", values="size", title="Доля статусов документов")
+    fig = px.pie(by, names="status", values="size", title="Доля статусов технических документов")
     fig.update_traces(hole=0.45)
     _apply_plotly_theme(fig)
     return fig
@@ -424,7 +426,7 @@ def fig_documents_donut_status(doc_df: pd.DataFrame) -> go.Figure:
 # CRUD UI blocks
 # ----------------------------
 def ui_products():
-    st.subheader("Справочник товаров")
+    st.subheader("Справочник СВЧ-компонентов и изделий")
 
     df = load_products_df()
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -432,11 +434,11 @@ def ui_products():
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### Добавить товар")
+        st.markdown("### Добавить СВЧ-компонент")
         with st.form("add_product", clear_on_submit=True):
             name = st.text_input("Наименование", value="")
-            category = st.text_input("Категория", value="Сухие смеси")
-            price = st.number_input("Цена (за единицу)", min_value=0.01, value=9.90, step=0.10)
+            category = st.text_input("Категория", value="Пассивные СВЧ-компоненты")
+            price = st.number_input("Нормо-стоимость (за единицу)", min_value=0.01, value=9.90, step=0.10)
             submitted = st.form_submit_button("Добавить")
             if submitted:
                 name = name.strip()
@@ -450,32 +452,32 @@ def ui_products():
                         with session_scope() as s:
                             exists = s.scalar(select(func.count(Product.id)).where(Product.name == name))
                             if exists and exists > 0:
-                                st.error("Товар с таким наименованием уже существует.")
+                                st.error("СВЧ-компонент с таким наименованием уже существует.")
                             else:
                                 s.add(Product(name=name, category=category, price=float(price)))
                         invalidate_caches()
-                        st.success("Товар добавлен.")
+                        st.success("СВЧ-компонент добавлен.")
                     except Exception as e:
                         logger.exception("add_product failed")
                         st.error(f"Ошибка добавления: {e}")
 
     with col2:
-        st.markdown("### Редактировать / удалить товар")
+        st.markdown("### Редактировать / удалить СВЧ-компонент")
         if df.empty:
-            st.info("Нет товаров для редактирования.")
+            st.info("Нет компонентов для редактирования.")
             return
 
-        product_id = st.selectbox("Выберите товар по ID", options=df["id"].tolist(), index=0)
+        product_id = st.selectbox("Выберите СВЧ-компонент по ID", options=df["id"].tolist(), index=0)
         row = df[df["id"] == product_id].iloc[0]
 
         with st.form("edit_product"):
             name_e = st.text_input("Наименование", value=str(row["name"]))
             category_e = st.text_input("Категория", value=str(row["category"]))
-            price_e = st.number_input("Цена", min_value=0.01, value=float(row["price"]), step=0.10)
+            price_e = st.number_input("Нормо-стоимость", min_value=0.01, value=float(row["price"]), step=0.10)
 
             c1, c2 = st.columns(2)
             save = c1.form_submit_button("Сохранить изменения")
-            delete = c2.form_submit_button("Удалить товар")
+            delete = c2.form_submit_button("Удалить компонент")
 
             if save:
                 name_e = name_e.strip()
@@ -489,13 +491,13 @@ def ui_products():
                         with session_scope() as s:
                             p = s.get(Product, int(product_id))
                             if p is None:
-                                st.error("Товар не найден.")
+                                st.error("СВЧ-компонент не найден.")
                             else:
                                 # контроль уникальности имени
                                 if p.name != name_e:
                                     exists = s.scalar(select(func.count(Product.id)).where(Product.name == name_e))
                                     if exists and exists > 0:
-                                        st.error("Товар с таким наименованием уже существует.")
+                                        st.error("СВЧ-компонент с таким наименованием уже существует.")
                                         return
                                 p.name = name_e
                                 p.category = category_e
@@ -511,22 +513,22 @@ def ui_products():
                     with session_scope() as s:
                         p = s.get(Product, int(product_id))
                         if p is None:
-                            st.error("Товар не найден.")
+                            st.error("СВЧ-компонент не найден.")
                         else:
                             s.delete(p)
                     invalidate_caches()
-                    st.success("Товар удалён (вместе с продажами по нему).")
+                    st.success("СВЧ-компонент удалён (вместе с операциями по нему).")
                 except Exception as e:
                     logger.exception("delete_product failed")
                     st.error(f"Ошибка удаления: {e}")
 
 
 def ui_sales(period_from: date, period_to: date):
-    st.subheader("Продажи")
+    st.subheader("Испытания и поставки")
 
     products_df = load_products_df()
     if products_df.empty:
-        st.warning("Сначала добавьте товары в справочник.")
+        st.warning("Сначала добавьте СВЧ-компоненты или изделия в справочник.")
         return
 
     df = load_sales_df(period_from, period_to)
@@ -535,31 +537,31 @@ def ui_sales(period_from: date, period_to: date):
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### Добавить продажу")
+        st.markdown("### Добавить операцию испытаний/поставки")
         with st.form("add_sale", clear_on_submit=True):
-            sale_date = st.date_input("Дата продажи", value=period_to)
-            store = st.text_input("Точка/склад", value="Точка №1")
-            employee_name = st.text_input("Сотрудник", value="Иванов И.И.")
+            sale_date = st.date_input("Дата операции", value=period_to)
+            store = st.text_input("Стенд/участок", value="Стенд ВНА/S-параметров")
+            employee_name = st.text_input("Инженер/специалист", value="Иванов И.И.")
 
             product_id = st.selectbox(
-                "Товар",
+                "СВЧ-компонент",
                 options=products_df["id"].tolist(),
                 format_func=lambda pid: f"{pid} — {products_df.loc[products_df['id']==pid, 'name'].iloc[0]}",
             )
 
-            qty = st.number_input("Количество", min_value=1, value=1, step=1)
+            qty = st.number_input("Количество образцов", min_value=1, value=1, step=1)
 
             base_price = float(products_df.loc[products_df["id"] == product_id, "price"].iloc[0])
-            unit_price = st.number_input("Цена за единицу", min_value=0.01, value=base_price, step=0.10)
+            unit_price = st.number_input("Нормо-стоимость за единицу", min_value=0.01, value=base_price, step=0.10)
 
             submitted = st.form_submit_button("Добавить")
             if submitted:
                 store = store.strip()
                 employee_name = employee_name.strip()
                 if not store:
-                    st.error("Поле 'Точка/склад' не может быть пустым.")
+                    st.error("Поле 'Стенд/участок' не может быть пустым.")
                 elif not employee_name:
-                    st.error("Поле 'Сотрудник' не может быть пустым.")
+                    st.error("Поле 'Инженер/специалист' не может быть пустым.")
                 else:
                     try:
                         with session_scope() as s:
@@ -572,51 +574,51 @@ def ui_sales(period_from: date, period_to: date):
                                 employee_name=employee_name,
                             ))
                         invalidate_caches()
-                        st.success("Продажа добавлена.")
+                        st.success("Операция испытаний/поставки добавлена.")
                     except Exception as e:
                         logger.exception("add_sale failed")
                         st.error(f"Ошибка добавления: {e}")
 
     with col2:
-        st.markdown("### Редактировать / удалить продажу")
+        st.markdown("### Редактировать / удалить операцию")
         if df.empty:
-            st.info("Нет продаж в выбранном периоде.")
+            st.info("Нет операций испытаний/поставок в выбранном периоде.")
             return
 
-        sale_id = st.selectbox("Выберите продажу по ID", options=df["id"].tolist(), index=0)
+        sale_id = st.selectbox("Выберите операцию испытаний/поставки по ID", options=df["id"].tolist(), index=0)
         row = df[df["id"] == sale_id].iloc[0]
 
         with st.form("edit_sale"):
-            sale_date_e = st.date_input("Дата продажи", value=row["sale_date"])
-            store_e = st.text_input("Точка/склад", value=str(row["store"]))
-            employee_e = st.text_input("Сотрудник", value=str(row["employee_name"]))
+            sale_date_e = st.date_input("Дата операции", value=row["sale_date"])
+            store_e = st.text_input("Стенд/участок", value=str(row["store"]))
+            employee_e = st.text_input("Инженер/специалист", value=str(row["employee_name"]))
 
             product_id_e = st.selectbox(
-                "Товар",
+                "СВЧ-компонент",
                 options=products_df["id"].tolist(),
                 index=products_df["id"].tolist().index(int(row["product_id"])),
                 format_func=lambda pid: f"{pid} — {products_df.loc[products_df['id']==pid, 'name'].iloc[0]}",
             )
-            qty_e = st.number_input("Количество", min_value=1, value=int(row["qty"]), step=1)
-            unit_price_e = st.number_input("Цена за единицу", min_value=0.01, value=float(row["unit_price"]), step=0.10)
+            qty_e = st.number_input("Количество образцов", min_value=1, value=int(row["qty"]), step=1)
+            unit_price_e = st.number_input("Нормо-стоимость за единицу", min_value=0.01, value=float(row["unit_price"]), step=0.10)
 
             c1, c2 = st.columns(2)
             save = c1.form_submit_button("Сохранить изменения")
-            delete = c2.form_submit_button("Удалить продажу")
+            delete = c2.form_submit_button("Удалить операцию")
 
             if save:
                 store_e = store_e.strip()
                 employee_e = employee_e.strip()
                 if not store_e:
-                    st.error("Поле 'Точка/склад' не может быть пустым.")
+                    st.error("Поле 'Стенд/участок' не может быть пустым.")
                 elif not employee_e:
-                    st.error("Поле 'Сотрудник' не может быть пустым.")
+                    st.error("Поле 'Инженер/специалист' не может быть пустым.")
                 else:
                     try:
                         with session_scope() as s:
                             r = s.get(Sale, int(sale_id))
                             if r is None:
-                                st.error("Продажа не найдена.")
+                                st.error("Операция испытаний/поставки не найдена.")
                             else:
                                 r.sale_date = sale_date_e
                                 r.store = store_e
@@ -635,18 +637,18 @@ def ui_sales(period_from: date, period_to: date):
                     with session_scope() as s:
                         r = s.get(Sale, int(sale_id))
                         if r is None:
-                            st.error("Продажа не найдена.")
+                            st.error("Операция испытаний/поставки не найдена.")
                         else:
                             s.delete(r)
                     invalidate_caches()
-                    st.success("Продажа удалена.")
+                    st.success("Операция испытаний/поставки удалена.")
                 except Exception as e:
                     logger.exception("delete_sale failed")
                     st.error(f"Ошибка удаления: {e}")
 
 
 def ui_hr_events(period_from: date, period_to: date):
-    st.subheader("HR события")
+    st.subheader("События команды")
 
     df = load_hr_events_df(period_from, period_to)
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -654,9 +656,9 @@ def ui_hr_events(period_from: date, period_to: date):
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("### Добавить HR событие")
+        st.markdown("### Добавить событие команды")
         with st.form("add_hr_event", clear_on_submit=True):
-            employee = st.text_input("Сотрудник", value="Иванов И.И.")
+            employee = st.text_input("Инженер/специалист", value="Иванов И.И.")
             event_type = st.selectbox("Тип события", options=[e.value for e in HREventType], index=2)
             start = st.date_input("Дата начала", value=period_to)
             end = st.date_input("Дата окончания (если применимо)", value=period_to)
@@ -667,7 +669,7 @@ def ui_hr_events(period_from: date, period_to: date):
                 employee = employee.strip()
                 notes = notes.strip()
                 if not employee:
-                    st.error("Сотрудник не может быть пустым.")
+                    st.error("Инженер/специалист не может быть пустым.")
                 else:
                     end_value: Optional[date] = None if end == start and event_type in ("Найм", "Увольнение") else end
                     try:
@@ -681,22 +683,22 @@ def ui_hr_events(period_from: date, period_to: date):
                                 notes=notes if notes else None,
                             ))
                         invalidate_caches()
-                        st.success("HR событие добавлено.")
+                        st.success("Событие команды добавлено.")
                     except Exception as e:
                         logger.exception("add_hr_event failed")
                         st.error(f"Ошибка добавления: {e}")
 
     with col2:
-        st.markdown("### Редактировать / удалить HR событие")
+        st.markdown("### Редактировать / удалить событие команды")
         if df.empty:
-            st.info("Нет HR событий в выбранном периоде.")
+            st.info("Нет событий команды в выбранном периоде.")
             return
 
         event_id = st.selectbox("Выберите событие по ID", options=df["id"].tolist(), index=0)
         row = df[df["id"] == event_id].iloc[0]
 
         with st.form("edit_hr_event"):
-            employee_e = st.text_input("Сотрудник", value=str(row["employee_name"]))
+            employee_e = st.text_input("Инженер/специалист", value=str(row["employee_name"]))
             event_type_e = st.selectbox(
                 "Тип события",
                 options=[e.value for e in HREventType],
@@ -716,7 +718,7 @@ def ui_hr_events(period_from: date, period_to: date):
                 employee_e = employee_e.strip()
                 notes_e = notes_e.strip()
                 if not employee_e:
-                    st.error("Сотрудник не может быть пустым.")
+                    st.error("Инженер/специалист не может быть пустым.")
                 else:
                     end_value: Optional[date] = None if (end_e == start_e and event_type_e in ("Найм", "Увольнение")) else end_e
                     try:
@@ -752,7 +754,7 @@ def ui_hr_events(period_from: date, period_to: date):
 
 
 def ui_documents():
-    st.subheader("HR документы — загрузка/подписание (статусы)")
+    st.subheader("Технические документы — регистрация/подписание (статусы)")
 
     df = load_documents_df()
     st.dataframe(df, use_container_width=True, hide_index=True)
@@ -762,8 +764,8 @@ def ui_documents():
     with col1:
         st.markdown("### Добавить документ")
         with st.form("add_doc", clear_on_submit=True):
-            employee = st.text_input("Сотрудник", value="Петров П.П.")
-            doc_type = st.text_input("Тип документа", value="Соглашение")
+            employee = st.text_input("Инженер/специалист", value="Петров П.П.")
+            doc_type = st.text_input("Тип технического документа", value="Протокол измерения S-параметров")
             status = st.selectbox("Статус", options=[s.value for s in DocumentStatus], index=0)
             comment = st.text_area("Комментарий", value="")
 
@@ -773,9 +775,9 @@ def ui_documents():
                 doc_type = doc_type.strip()
                 comment = comment.strip()
                 if not employee:
-                    st.error("Сотрудник не может быть пустым.")
+                    st.error("Инженер/специалист не может быть пустым.")
                 elif not doc_type:
-                    st.error("Тип документа не может быть пустым.")
+                    st.error("Тип технического документа не может быть пустым.")
                 else:
                     try:
                         with session_scope() as s:
@@ -805,8 +807,8 @@ def ui_documents():
         row = df[df["id"] == doc_id].iloc[0]
 
         with st.form("edit_doc"):
-            employee_e = st.text_input("Сотрудник", value=str(row["employee_name"]))
-            doc_type_e = st.text_input("Тип документа", value=str(row["doc_type"]))
+            employee_e = st.text_input("Инженер/специалист", value=str(row["employee_name"]))
+            doc_type_e = st.text_input("Тип технического документа", value=str(row["doc_type"]))
             status_e = st.selectbox(
                 "Статус",
                 options=[s.value for s in DocumentStatus],
@@ -823,9 +825,9 @@ def ui_documents():
                 doc_type_e = doc_type_e.strip()
                 comment_e = comment_e.strip()
                 if not employee_e:
-                    st.error("Сотрудник не может быть пустым.")
+                    st.error("Инженер/специалист не может быть пустым.")
                 elif not doc_type_e:
-                    st.error("Тип документа не может быть пустым.")
+                    st.error("Тип технического документа не может быть пустым.")
                 else:
                     try:
                         with session_scope() as s:
@@ -868,7 +870,7 @@ def ui_documents():
 # Dashboard page
 # ----------------------------
 def ui_dashboard(period_from: date, period_to: date):
-    st.subheader("Дашборд: продажи + HR + документы")
+    st.subheader("Дашборд: СВЧ-компоненты + испытания + технические документы")
 
     sales_df = load_sales_df(period_from, period_to)
     hr_df = load_hr_events_df(period_from, period_to)
@@ -881,10 +883,10 @@ def ui_dashboard(period_from: date, period_to: date):
     hr_events = int(len(hr_df)) if not hr_df.empty else 0
     docs_signed = int((doc_df["status"] == DocumentStatus.signed.value).sum()) if not doc_df.empty else 0
 
-    k1.metric("Выручка", f"{revenue:,.2f}".replace(",", " "))
-    k2.metric("Кол-во записей продаж", f"{orders}")
-    k3.metric("HR событий в периоде", f"{hr_events}")
-    k4.metric("Подписанных документов", f"{docs_signed}")
+    k1.metric("Объём работ, усл. ед.", f"{revenue:,.2f}".replace(",", " "))
+    k2.metric("Кол-во операций", f"{orders}")
+    k3.metric("Событий команды в периоде", f"{hr_events}")
+    k4.metric("Подписанных техдокументов", f"{docs_signed}")
 
     st.divider()
 
@@ -932,7 +934,7 @@ def ui_pdf_export(period_from: date, period_to: date):
     png8 = png_documents_donut_status(doc_df)
 
     # ----------------------------
-    # SALES analytics
+    # Test/supply operations analytics
     # ----------------------------
     revenue = float(sales_df["revenue"].sum()) if not sales_df.empty else 0.0
     orders = int(len(sales_df)) if not sales_df.empty else 0
@@ -951,13 +953,13 @@ def ui_pdf_export(period_from: date, period_to: date):
             worst_day = (str(worst["sale_date"]), float(worst["revenue"]))
 
     fig1_desc_parts = [
-        "Описание: график показывает динамику суммарной выручки по дням за выбранный период.<br/>",
+        "Описание: график показывает динамику суммарного объёма работ по дням за выбранный период.<br/>",
     ]
     if by_day.empty:
-        fig1_desc_parts.append("&bull; Продаж в периоде нет — динамика не рассчитывается.<br/>")
+        fig1_desc_parts.append("&bull; Операций в периоде нет — динамика не рассчитывается.<br/>")
     else:
         days_with_sales = int(len(by_day))
-        fig1_desc_parts.append(f"&bull; Дней с зафиксированной выручкой: <b>{days_with_sales}</b><br/>")
+        fig1_desc_parts.append(f"&bull; Дней с зафиксированным объёмом работ: <b>{days_with_sales}</b><br/>")
         if best_day is not None:
             fig1_desc_parts.append(
                 f"&bull; Пик: <b>{best_day[0]}</b> — {best_day[1]:,.2f}<br/>".replace(",", " ")
@@ -980,9 +982,9 @@ def ui_pdf_export(period_from: date, period_to: date):
             fig1_desc_parts.append(f"&bull; Волатильность (σ/μ): <b>{cv:.2f}</b><br/>")
     fig1_desc = "".join(fig1_desc_parts)
 
-    top_prod_rows = [["Товар", "Выручка", "Доля"], ["—", "—", "—"]]
-    top_cat_rows = [["Категория", "Выручка", "Доля"], ["—", "—", "—"]]
-    store_rows = [["Точка", "Выручка", "Доля"], ["—", "—", "—"]]
+    top_prod_rows = [["СВЧ-компонент", "Объём работ, усл. ед.", "Доля"], ["—", "—", "—"]]
+    top_cat_rows = [["Категория", "Объём работ, усл. ед.", "Доля"], ["—", "—", "—"]]
+    store_rows = [["Стенд/участок", "Объём работ, усл. ед.", "Доля"], ["—", "—", "—"]]
 
     if not sales_df.empty and revenue > 0:
         by_prod = (
@@ -995,7 +997,7 @@ def ui_pdf_export(period_from: date, period_to: date):
             sales_df.groupby("store", as_index=False)["revenue"].sum().sort_values("revenue", ascending=False)
         )
 
-        top_prod_rows = [["Товар", "Выручка", "Доля"]]
+        top_prod_rows = [["СВЧ-компонент", "Объём работ, усл. ед.", "Доля"]]
         for _, r in by_prod.head(5).iterrows():
             share = float(r["revenue"]) / revenue * 100.0
             top_prod_rows.append([
@@ -1004,7 +1006,7 @@ def ui_pdf_export(period_from: date, period_to: date):
                 f"{share:.1f}%",
             ])
 
-        top_cat_rows = [["Категория", "Выручка", "Доля"]]
+        top_cat_rows = [["Категория", "Объём работ, усл. ед.", "Доля"]]
         for _, r in by_cat.head(5).iterrows():
             share = float(r["revenue"]) / revenue * 100.0
             top_cat_rows.append([
@@ -1013,7 +1015,7 @@ def ui_pdf_export(period_from: date, period_to: date):
                 f"{share:.1f}%",
             ])
 
-        store_rows = [["Точка", "Выручка", "Доля"]]
+        store_rows = [["Стенд/участок", "Объём работ, усл. ед.", "Доля"]]
         for _, r in by_store.iterrows():
             share = float(r["revenue"]) / revenue * 100.0
             store_rows.append([
@@ -1023,10 +1025,10 @@ def ui_pdf_export(period_from: date, period_to: date):
             ])
 
     fig2_desc_parts = [
-        "Описание: горизонтальная диаграмма сравнивает вклад товаров в выручку (топ по сумме).<br/>",
+        "Описание: горизонтальная диаграмма сравнивает вклад СВЧ-компонентов в общий объём работ (топ по сумме).<br/>",
     ]
     if sales_df.empty or revenue <= 0:
-        fig2_desc_parts.append("&bull; Недостаточно данных для ранжирования товаров.<br/>")
+        fig2_desc_parts.append("&bull; Недостаточно данных для ранжирования компонентов.<br/>")
     else:
         by_prod_full = sales_df.groupby("product_name", as_index=False)["revenue"].sum().sort_values("revenue", ascending=False)
         top3 = by_prod_full.head(3)
@@ -1036,12 +1038,12 @@ def ui_pdf_export(period_from: date, period_to: date):
             for _, r in top3.iterrows():
                 sh = float(r["revenue"]) / revenue * 100.0
                 items.append(f"{str(r['product_name'])}: <b>{sh:.1f}%</b>")
-            fig2_desc_parts.append("&bull; Топ-3 по доле выручки: " + ", ".join(items) + "<br/>")
+            fig2_desc_parts.append("&bull; Топ-3 по доле объёма работ: " + ", ".join(items) + "<br/>")
             fig2_desc_parts.append(f"&bull; Совокупная доля топ-3: <b>{top3_share:.1f}%</b><br/>")
     fig2_desc = "".join(fig2_desc_parts)
 
     fig3_desc_parts = [
-        "Описание: круговая диаграмма показывает структуру выручки по категориям товаров.<br/>",
+        "Описание: круговая диаграмма показывает структуру объёма работ по категориям СВЧ-компонентов.<br/>",
     ]
     if sales_df.empty or revenue <= 0:
         fig3_desc_parts.append("&bull; Нет данных для расчёта долей по категориям.<br/>")
@@ -1059,7 +1061,7 @@ def ui_pdf_export(period_from: date, period_to: date):
     fig3_desc = "".join(fig3_desc_parts)
 
     fig6_desc_parts = [
-        "Описание: боксплот показывает распределение дневной выручки по торговым точкам (медиана, разброс и выбросы).<br/>",
+        "Описание: боксплот показывает распределение дневного объёма работ по стендам/участкам (медиана, разброс и выбросы).<br/>",
     ]
     by_store_day = (
         sales_df.groupby(["store", "sale_date"], as_index=False)["revenue"].sum()
@@ -1067,40 +1069,40 @@ def ui_pdf_export(period_from: date, period_to: date):
         else pd.DataFrame()
     )
     if by_store_day.empty:
-        fig6_desc_parts.append("&bull; Недостаточно данных, чтобы построить распределения по точкам.<br/>")
+        fig6_desc_parts.append("&bull; Недостаточно данных, чтобы построить распределения по стендам/участкам.<br/>")
     else:
         med = by_store_day.groupby("store")["revenue"].median().sort_values(ascending=False)
         if not med.empty:
             best_store = str(med.index[0])
-            fig6_desc_parts.append(f"&bull; Максимальная медианная дневная выручка: <b>{best_store}</b><br/>")
+            fig6_desc_parts.append(f"&bull; Максимальный медианный дневной объём работ: <b>{best_store}</b><br/>")
         # Вариативность по IQR
         iqr = by_store_day.groupby("store")["revenue"].quantile(0.75) - by_store_day.groupby("store")["revenue"].quantile(0.25)
         iqr = iqr.sort_values(ascending=False)
         if not iqr.empty:
             var_store = str(iqr.index[0])
             fig6_desc_parts.append(f"&bull; Наибольший разброс (IQR): <b>{var_store}</b><br/>")
-        fig6_desc_parts.append(f"&bull; Точек в графике: <b>{by_store_day['store'].nunique()}</b><br/>")
-        fig6_desc_parts.append(f"&bull; Дней (store×day) в выборке: <b>{len(by_store_day)}</b><br/>")
+        fig6_desc_parts.append(f"&bull; Стендов/участков в графике: <b>{by_store_day['store'].nunique()}</b><br/>")
+        fig6_desc_parts.append(f"&bull; Дней (стенд×день) в выборке: <b>{len(by_store_day)}</b><br/>")
     fig6_desc = "".join(fig6_desc_parts)
 
     fig7_desc_parts = [
-        "Описание: диаграмма рассеивания показывает связь между ценой за единицу и количеством в строках продаж (размер точки ~ выручке).<br/>",
+        "Описание: диаграмма рассеивания показывает связь между нормо-стоимостью единицы и количеством образцов в строках операций (размер точки ~ объёму работ).<br/>",
     ]
     sc = sales_df.dropna(subset=["unit_price", "qty"]).copy() if not sales_df.empty else pd.DataFrame()
     if sc.empty:
-        fig7_desc_parts.append("&bull; Недостаточно данных для оценки связи цены и количества.<br/>")
+        fig7_desc_parts.append("&bull; Недостаточно данных для оценки связи нормо-стоимости и количества.<br/>")
     else:
         sc = sc[(sc["unit_price"] > 0) & (sc["qty"] > 0)]
         if len(sc) < 2:
             fig7_desc_parts.append("&bull; Слишком мало точек для расчёта корреляции.<br/>")
         else:
             corr = float(sc["unit_price"].corr(sc["qty"]))
-            fig7_desc_parts.append(f"&bull; Корреляция (цена ↔ количество): <b>{corr:+.2f}</b><br/>")
+            fig7_desc_parts.append(f"&bull; Корреляция (нормо-стоимость ↔ количество): <b>{corr:+.2f}</b><br/>")
         if "revenue" in sc.columns and not sc["revenue"].isna().all():
             top = sc.loc[sc["revenue"].idxmax()]
             fig7_desc_parts.append(
-                ("&bull; Максимальная выручка в одной строке: "
-                 f"<b>{float(top['revenue']):,.2f}</b> — {top.get('product_name','')} (точка: {top.get('store','')})<br/>")
+                ("&bull; Максимальный объём работ в одной строке: "
+                 f"<b>{float(top['revenue']):,.2f}</b> — {top.get('product_name','')} (стенд/участок: {top.get('store','')})<br/>")
                 .replace(",", " ")
             )
         fig7_desc_parts.append(f"&bull; Точек на графике: <b>{len(sc)}</b><br/>")
@@ -1108,10 +1110,10 @@ def ui_pdf_export(period_from: date, period_to: date):
 
     desc_sales_parts = [
         "Ключевые выводы:<br/>",
-        f"&bull; Итоговая выручка: <b>{revenue:,.2f}</b><br/>".replace(",", " "),
-        f"&bull; Кол-во продаж (строк): <b>{orders}</b><br/>",
-        f"&bull; Средний чек (по строкам): <b>{avg_ticket:,.2f}</b><br/>".replace(",", " "),
-        f"&bull; Средняя дневная выручка: <b>{avg_daily:,.2f}</b><br/>".replace(",", " "),
+        f"&bull; Итоговый объём работ: <b>{revenue:,.2f}</b><br/>".replace(",", " "),
+        f"&bull; Кол-во операций (строк): <b>{orders}</b><br/>",
+        f"&bull; Средняя стоимость операции: <b>{avg_ticket:,.2f}</b><br/>".replace(",", " "),
+        f"&bull; Средний дневной объём работ: <b>{avg_daily:,.2f}</b><br/>".replace(",", " "),
     ]
     if best_day is not None:
         desc_sales_parts.append(
@@ -1124,7 +1126,7 @@ def ui_pdf_export(period_from: date, period_to: date):
     desc_sales = "".join(desc_sales_parts)
 
     # ----------------------------
-    # HR analytics
+    # Engineering team analytics
     # ----------------------------
     hr_total = int(len(hr_df)) if not hr_df.empty else 0
     hr_employees = int(hr_df["employee_name"].nunique()) if not hr_df.empty else 0
@@ -1141,10 +1143,10 @@ def ui_pdf_export(period_from: date, period_to: date):
         hr_days_sick = int(tmp.loc[tmp["event_type"] == HREventType.sick_leave.value, "days"].sum())
 
     fig4_desc_parts = [
-        "Описание: столбцы отражают количество HR-событий по месяцам с разбиением по типам.<br/>",
+        "Описание: столбцы отражают количество событий команды по месяцам с разбиением по типам.<br/>",
     ]
     if hr_df.empty:
-        fig4_desc_parts.append("&bull; HR-событий в периоде нет.<br/>")
+        fig4_desc_parts.append("&bull; Событий команды в периоде нет.<br/>")
     else:
         tmpm = hr_df.copy()
         tmpm["month"] = pd.to_datetime(tmpm["start_date"]).dt.to_period("M").astype(str)
@@ -1161,7 +1163,7 @@ def ui_pdf_export(period_from: date, period_to: date):
     desc_hr_parts = [
         "Ключевые выводы:<br/>",
         f"&bull; Событий в периоде: <b>{hr_total}</b><br/>",
-        f"&bull; Затронуто сотрудников: <b>{hr_employees}</b><br/>",
+        f"&bull; Затронуто инженеров/специалистов: <b>{hr_employees}</b><br/>",
     ]
     if hr_counts:
         desc_hr_parts.append(
@@ -1174,7 +1176,7 @@ def ui_pdf_export(period_from: date, period_to: date):
     desc_hr = "".join(desc_hr_parts)
 
     # ----------------------------
-    # Documents analytics
+    # Technical documents analytics
     # ----------------------------
     doc_total = int(len(doc_df)) if not doc_df.empty else 0
     doc_signed = int((doc_df["status"] == DocumentStatus.signed.value).sum()) if not doc_df.empty else 0
@@ -1198,10 +1200,10 @@ def ui_pdf_export(period_from: date, period_to: date):
             pending_over_7d = int(((now - pending["uploaded_at"]) > pd.Timedelta(days=7)).fillna(False).sum())
 
     fig5_desc_parts = [
-        "Описание: диаграмма показывает распределение HR-документов по статусам на момент формирования отчёта.<br/>",
+        "Описание: диаграмма показывает распределение технических документов по статусам на момент формирования отчёта.<br/>",
     ]
     if doc_total == 0:
-        fig5_desc_parts.append("&bull; Документов нет — распределение не рассчитывается.<br/>")
+        fig5_desc_parts.append("&bull; Технических документов нет — распределение не рассчитывается.<br/>")
     else:
         fig5_desc_parts.append(f"&bull; Подписано: <b>{doc_signed}</b> из <b>{doc_total}</b> (доля <b>{sign_rate:.1f}%</b>)<br/>")
         if doc_counts:
@@ -1214,7 +1216,7 @@ def ui_pdf_export(period_from: date, period_to: date):
 
     fig8_desc_parts = [
         "Описание: пончиковая диаграмма показывает доли документов по статусам (в процентах от общего числа).<br/>",
-        f"&bull; Документов всего: <b>{doc_total}</b><br/>",
+        f"&bull; Технических документов всего: <b>{doc_total}</b><br/>",
         f"&bull; Подписано: <b>{doc_signed}</b> (доля <b>{sign_rate:.1f}%</b>)<br/>",
     ]
     if doc_counts:
@@ -1224,7 +1226,7 @@ def ui_pdf_export(period_from: date, period_to: date):
 
     desc_docs_parts = [
         "Ключевые выводы:<br/>",
-        f"&bull; Документов всего: <b>{doc_total}</b><br/>",
+        f"&bull; Технических документов всего: <b>{doc_total}</b><br/>",
         f"&bull; Подписано: <b>{doc_signed}</b> (доля <b>{sign_rate:.1f}%</b>)<br/>",
     ]
     if doc_counts:
@@ -1240,34 +1242,34 @@ def ui_pdf_export(period_from: date, period_to: date):
 
     sections = [
         ReportSection(
-            title="Продажи",
+            title="Испытания и поставки СВЧ-компонентов",
             description=desc_sales,
             tables=[
-                ReportTable(caption="Топ-5 товаров по выручке", rows=top_prod_rows),
-                ReportTable(caption="Топ-5 категорий по выручке", rows=top_cat_rows),
-                ReportTable(caption="Выручка по точкам", rows=store_rows),
+                ReportTable(caption="Топ-5 СВЧ-компонентов по объёму работ", rows=top_prod_rows),
+                ReportTable(caption="Топ-5 категорий по объёму работ", rows=top_cat_rows),
+                ReportTable(caption="Объём работ, усл. ед. по стендам/участкам", rows=store_rows),
             ],
             figures=[
-                ReportFigure(caption="Выручка по дням.", png_bytes=png1, description=fig1_desc),
-                ReportFigure(caption="Топ товаров по выручке.", png_bytes=png2, description=fig2_desc),
-                ReportFigure(caption="Доля выручки по категориям (пончиковая).", png_bytes=png3, description=fig3_desc),
-                ReportFigure(caption="Распределение дневной выручки по точкам (боксплот).", png_bytes=png6, description=fig6_desc),
-                ReportFigure(caption="Цена vs Количество (диаграмма рассеивания).", png_bytes=png7, description=fig7_desc),
+                ReportFigure(caption="Объём работ по дням.", png_bytes=png1, description=fig1_desc),
+                ReportFigure(caption="Топ СВЧ-компонентов по объёму работ.", png_bytes=png2, description=fig2_desc),
+                ReportFigure(caption="Доля объёма работ по категориям (пончиковая).", png_bytes=png3, description=fig3_desc),
+                ReportFigure(caption="Распределение дневного объёма работ по стендам/участкам (боксплот).", png_bytes=png6, description=fig6_desc),
+                ReportFigure(caption="Нормо-стоимость vs Количество образцов (диаграмма рассеивания).", png_bytes=png7, description=fig7_desc),
             ],
         ),
         ReportSection(
-            title="HR события",
+            title="События инженерной команды",
             description=desc_hr,
             figures=[
-                ReportFigure(caption="HR события по месяцам.", png_bytes=png4, description=fig4_desc),
+                ReportFigure(caption="События инженерной команды по месяцам.", png_bytes=png4, description=fig4_desc),
             ],
         ),
         ReportSection(
-            title="Документы (загрузка/подписание)",
+            title="Технические документы (регистрация/подписание)",
             description=desc_docs,
             figures=[
-                ReportFigure(caption="Доля статусов документов (пончиковая).", png_bytes=png8, description=fig8_desc),
-                ReportFigure(caption="Статусы документов (в абсолютных значениях).", png_bytes=png5, description=fig5_desc),
+                ReportFigure(caption="Доля статусов технических документов (пончиковая).", png_bytes=png8, description=fig8_desc),
+                ReportFigure(caption="Статусы технических документов (в абсолютных значениях).", png_bytes=png5, description=fig5_desc),
             ],
         ),
     ]
@@ -1303,9 +1305,9 @@ with st.sidebar:
         "Раздел",
         options=[
             "Дашборд",
-            "Товары",
-            "Продажи",
-            "HR события",
+            "СВЧ-компоненты",
+            "Испытания и поставки",
+            "События команды",
             "Документы",
             "PDF отчёт",
         ],
@@ -1326,11 +1328,11 @@ with st.sidebar:
 if period_from <= period_to:
     if page == "Дашборд":
         ui_dashboard(period_from, period_to)
-    elif page == "Товары":
+    elif page == "СВЧ-компоненты":
         ui_products()
-    elif page == "Продажи":
+    elif page == "Испытания и поставки":
         ui_sales(period_from, period_to)
-    elif page == "HR события":
+    elif page == "События команды":
         ui_hr_events(period_from, period_to)
     elif page == "Документы":
         ui_documents()
