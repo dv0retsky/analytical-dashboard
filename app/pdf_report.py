@@ -53,29 +53,67 @@ _FONTS_REGISTERED = False
 
 
 def _register_cyrillic_fonts() -> tuple[str, str]:
-    """Регистрирует TTF-шрифты с кириллицей.
+    """Регистрирует TTF-шрифты с поддержкой кириллицы.
 
-    Возвращает (regular_font_name, bold_font_name). Если регистрация не удалась,
-    возвращает ("Helvetica", "Helvetica-Bold").
+    В исходной версии PDF зависел от app/assets/fonts или системной папки
+    /usr/share/fonts. На Windows/macOS или в минимальном Linux-окружении эти
+    файлы могут отсутствовать, и ReportLab откатывается к Helvetica, которая не
+    поддерживает кириллицу. Поэтому основной переносимый источник — шрифты
+    DejaVu Sans, поставляемые вместе с Matplotlib (Matplotlib уже есть в
+    requirements.txt для генерации графиков).
     """
 
     global _FONTS_REGISTERED
     if _FONTS_REGISTERED:
         return "DejaVuSans", "DejaVuSans-Bold"
 
-    font_dir = Path(__file__).resolve().parent / "assets" / "fonts"
-    regular_path = font_dir / "DejaVuSans.ttf"
-    bold_path = font_dir / "DejaVuSans-Bold.ttf"
+    def _existing(paths: list[Path]) -> Optional[Path]:
+        for path in paths:
+            if path.exists() and path.is_file():
+                return path
+        return None
 
-    if not regular_path.exists() or not bold_path.exists():
-        sys_regular = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf")
-        sys_bold = Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf")
-        if sys_regular.exists() and sys_bold.exists():
-            regular_path = sys_regular
-            bold_path = sys_bold
+    app_font_dir = Path(__file__).resolve().parent / "assets" / "fonts"
+
+    matplotlib_font_dir: Optional[Path] = None
+    try:
+        import matplotlib  # type: ignore
+
+        matplotlib_font_dir = Path(matplotlib.get_data_path()) / "fonts" / "ttf"
+    except Exception:
+        matplotlib_font_dir = None
+
+    regular_candidates = [
+        app_font_dir / "DejaVuSans.ttf",
+    ]
+    bold_candidates = [
+        app_font_dir / "DejaVuSans-Bold.ttf",
+    ]
+
+    if matplotlib_font_dir is not None:
+        regular_candidates.append(matplotlib_font_dir / "DejaVuSans.ttf")
+        bold_candidates.append(matplotlib_font_dir / "DejaVuSans-Bold.ttf")
+
+    # Частые системные пути Linux/macOS/Windows. Файлы не входят в архив проекта.
+    regular_candidates.extend([
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("/usr/share/fonts/dejavu/DejaVuSans.ttf"),
+        Path("/Library/Fonts/Arial Unicode.ttf"),
+        Path("/Library/Fonts/Arial.ttf"),
+        Path("C:/Windows/Fonts/arial.ttf"),
+    ])
+    bold_candidates.extend([
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"),
+        Path("/usr/share/fonts/dejavu/DejaVuSans-Bold.ttf"),
+        Path("/Library/Fonts/Arial Bold.ttf"),
+        Path("C:/Windows/Fonts/arialbd.ttf"),
+    ])
+
+    regular_path = _existing(regular_candidates)
+    bold_path = _existing(bold_candidates) or regular_path
 
     try:
-        if regular_path.exists() and bold_path.exists():
+        if regular_path is not None and bold_path is not None:
             pdfmetrics.registerFont(TTFont("DejaVuSans", str(regular_path)))
             pdfmetrics.registerFont(TTFont("DejaVuSans-Bold", str(bold_path)))
             registerFontFamily(
@@ -88,9 +126,9 @@ def _register_cyrillic_fonts() -> tuple[str, str]:
             _FONTS_REGISTERED = True
             return "DejaVuSans", "DejaVuSans-Bold"
     except Exception:
-        # Не валим генерацию PDF из-за шрифтов.
         _FONTS_REGISTERED = False
 
+    # Последний резерв: PDF всё равно сформируется, но без гарантии кириллицы.
     return "Helvetica", "Helvetica-Bold"
 
 
@@ -184,6 +222,7 @@ def build_pdf_report(
 
     for st in styles.byName.values():
         st.fontName = regular_font
+        st.bulletFontName = regular_font
     if "Title" in styles.byName:
         styles["Title"].fontName = bold_font
     if "Heading1" in styles.byName:
